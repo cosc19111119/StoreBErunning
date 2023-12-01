@@ -114,6 +114,7 @@ myApp.put("/myProducts/:id", upload.single('image'), async (req, res) => {
         fs.rename(req.file.path, `uploads/${fileNmae}`, () => {
             console.log("\nFile Renamed!\n");
         });
+        
 
         const oldproduct = await myProduct.findById(id);
 
