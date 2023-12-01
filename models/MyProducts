@@ -1,0 +1,29 @@
+const mongoose=require('mongoose')
+const schema= new mongoose.Schema({
+    name:{
+     type:String,
+     required:true
+    },
+    category:{
+        type:String,
+        required:[true,"Product category is requird"],
+       
+        enum: { values: ['Shirts', 'Pents'], message: '{VALUE} is not supported' },
+    },
+    price:{
+           type:Number,
+           required:true
+    },
+    image:{
+        type:String
+    }
+
+
+   
+})
+
+
+const myProducts= mongoose.model('MyProduct',schema);
+
+
+module.exports=myProducts
