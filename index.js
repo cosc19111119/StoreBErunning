@@ -2,15 +2,136 @@ const express = require('express');
 const myApp = express();
 const mongoose = require('mongoose')
 const myProduct = require("./models/MyProducts");
+const SignUp = require('./models/SignUp')
 const cors = require('cors')
 const multer = require('multer')
 const fs = require('fs')
 const upload = multer({ dest: 'uploads/' })
 const path = require('path')
+const bcrypt = require("bcrypt");
+const jwt = require('jsonwebtoken');
+const secrtkey = "udtf753gsgtyurd";
 // middleware
 myApp.use(express.json());
 myApp.use(cors());
 myApp.use(express.static(path.join(__dirname, "uploads")));
+
+
+
+
+
+//authantication 
+
+myApp.get("/", async (req, res) => {
+    res.send("working...")
+})
+
+
+myApp.post('/signUp', async (req, res) => {
+    const { name, email, password } = req.body;
+    console.log(name, email, password);
+    try {
+
+        // check is user already registered 
+        const alreadyuser = await SignUp.findOne({ email: email })
+        if (alreadyuser !== null) {
+            return res.status(200).json({
+                status: "failed",
+                message: 'user already registerd'
+            })
+        }
+
+
+
+        // password hashed
+
+        const hashed = await bcrypt.hash(password, 10);
+
+        // create user
+
+        const newuser = await SignUp.create({
+            name: name, email: email, password: hashed
+        })
+
+        // generate token?
+
+        const token = jwt.sign({ id: newuser._id }, secrtkey);
+
+        // return response
+
+        res.status(201).json({
+            status: "success",
+            message: "Registered successfully",
+            token:token
+
+        })
+
+
+
+
+
+    } catch (error) {
+
+    }
+})
+
+
+// user registration
+
+
+myApp.post("/login", async (req, res) => {
+    const { email,password } = req.body;
+  
+    try {
+
+        // confirm the user is registered or not with email
+
+        const userExist = await SignUp.findOne({ email: email })
+        if (userExist === null) {
+            return res.json({
+                status: "failed",
+                message: "faild authentication"
+            })
+        }
+
+        // confirm password
+
+        const confrmpswd = await bcrypt.compare(password, userExist.password);
+
+        if (confrmpswd == false) {
+            return res.json({
+                status: "fail",
+                message: "faild authentication"
+
+            })
+        }
+
+
+        const token = jwt.sign({ id: userExist._id }, secrtkey);
+
+        // return response
+        res.status(201).json({
+            status: "success",
+            message: "Logged in successfully",
+            token:token
+
+        })
+
+    } catch (error) {
+
+    }
+})
+
+
+
+
+
+
+
+
+
+
+
 
 
 //image upload 
@@ -114,7 +235,7 @@ myApp.put("/myProducts/:id", upload.single('image'), async (req, res) => {
         fs.rename(req.file.path, `uploads/${fileNmae}`, () => {
             console.log("\nFile Renamed!\n");
         });
-        
+
 
         const oldproduct = await myProduct.findById(id);
 
@@ -226,23 +347,23 @@ myApp.post('/myProducts', upload.single('image'), async (req, res) => {
 myApp.delete("/myProducts/:id", async (req, res) => {
     const id = req.params.id;
     console.log(id)
-    
 
-       
-      
+
+
+
     try {
         const oldproduct = await myProduct.findById(id);
 
 
         await myProduct.findByIdAndDelete(id);
         fs.unlink(`uploads/${oldproduct.image}`, () => console.log("file deleted"))
-    
-     res.status(200).json({
+
+        res.status(200).json({
             status: true,
             message: "product succesfully deleted"
         })
 
-        
+
     } catch (error) {
         return res.status(404).json({
             status: false,
